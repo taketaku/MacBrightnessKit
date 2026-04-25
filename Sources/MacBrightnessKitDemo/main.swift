@@ -31,6 +31,18 @@ struct Demo {
                 exit(1)
             }
             setBrightness(backend: backend, displayID: id, value: value)
+        case "diag":
+            guard args.count == 3, let id = parseDisplayID(args[2]) else {
+                printUsage()
+                exit(1)
+            }
+            diagnose(backend: backend, displayID: id)
+        case "capability", "cap":
+            guard args.count == 3, let id = parseDisplayID(args[2]) else {
+                printUsage()
+                exit(1)
+            }
+            showCapability(backend: backend, displayID: id)
         case "-h", "--help", "help":
             printUsage()
         default:
@@ -43,11 +55,13 @@ struct Demo {
         let bin = (CommandLine.arguments.first as NSString?)?.lastPathComponent ?? "macbrightness"
         print("""
         usage:
-          \(bin) list                         全ディスプレイと ID/内蔵外部/名前を表示
-          \(bin) get <displayID>              指定ディスプレイの現在輝度を表示 (0.0〜1.0)
-          \(bin) set <displayID> <value>      指定ディスプレイの輝度を設定 (0.0〜1.0)
+          \(bin) list                         List all displays with displayID / kind / name
+          \(bin) get <displayID>              Print the display's current brightness (0.0-1.0)
+          \(bin) set <displayID> <value>      Set the display's brightness (0.0-1.0)
+          \(bin) diag <displayID>             Show backend selection and read results from both paths
+          \(bin) capability <displayID>       Report whether brightness control is available
 
-        例:
+        Examples:
           \(bin) list
           \(bin) set 1 0.5
         """)
@@ -65,29 +79,71 @@ struct Demo {
             print("(no active displays found)")
             return
         }
-        print(String(format: "%-12s  %-8s  %s", "displayID", "kind", "name"))
+        print(pad("displayID", 12) + "  " + pad("kind", 8) + "  name")
         print(String(repeating: "-", count: 50))
         for d in displays {
-            print(String(format: "%-12u  %-8s  %s", d.displayID, d.isBuiltin ? "builtin" : "external", d.name))
+            let id = pad("\(d.displayID)", 12)
+            let kind = pad(d.isBuiltin ? "builtin" : "external", 8)
+            print("\(id)  \(kind)  \(d.name)")
         }
     }
 
+    static func pad(_ s: String, _ length: Int) -> String {
+        s.count >= length ? s : s + String(repeating: " ", count: length - s.count)
+    }
+
     static func getBrightness(backend: DisplayBrightnessBackend, displayID: CGDirectDisplayID) {
-        if let value = backend.getBrightness(displayID: displayID) {
+        do {
+            let value = try backend.getBrightness(displayID: displayID)
             print(String(format: "%.3f", value))
-        } else {
-            print("(unable to read brightness)")
+        } catch {
+            print("(unable to read brightness: \(error))")
             exit(2)
         }
     }
 
     static func setBrightness(backend: DisplayBrightnessBackend, displayID: CGDirectDisplayID, value: Float) {
-        let ok = backend.setBrightness(displayID: displayID, value: value)
-        if ok {
+        do {
+            try backend.setBrightness(displayID: displayID, value: value)
             print("ok")
-        } else {
-            print("(failed)")
+        } catch {
+            print("(failed: \(error))")
             exit(2)
         }
+    }
+
+    static func diagnose(backend: DisplayBrightnessBackend, displayID: CGDirectDisplayID) {
+        guard let system = backend as? SystemDisplayBrightnessBackend else {
+            print("(backend does not support diagnostics)")
+            exit(2)
+        }
+        let d = system.diagnose(displayID: displayID)
+        func fmt(_ v: Float?) -> String { v.map { String(format: "%.3f", $0) } ?? "nil" }
+        let ddcMaxStr = d.ddcMax.map { String($0) } ?? "nil"
+        print("""
+        displayID:               \(d.displayID)
+        isBuiltin:               \(d.isBuiltin)
+        canUseDisplayServices:   \(d.canUseDisplayServices)
+        vendor:                  \(d.vendor) (0x\(String(d.vendor, radix: 16)))
+        model:                   \(d.model) (0x\(String(d.model, radix: 16)))
+        DisplayServices read:    \(fmt(d.displayServicesBrightness))
+        DDC read:                \(fmt(d.ddcBrightness))
+        DDC max:                 \(ddcMaxStr)
+        """)
+    }
+
+    static func showCapability(backend: DisplayBrightnessBackend, displayID: CGDirectDisplayID) {
+        let cap = backend.capability(displayID: displayID)
+        let backendName: String
+        switch cap.backend {
+        case .displayServices: backendName = "displayServices"
+        case .ddc: backendName = "ddc"
+        case .unsupported: backendName = "unsupported"
+        }
+        print("""
+        displayID:    \(displayID)
+        isSupported:  \(cap.isSupported)
+        backend:      \(backendName)
+        """)
     }
 }
