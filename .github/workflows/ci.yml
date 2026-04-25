@@ -12,14 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.app
-
-      - name: Swift version
-        run: swift --version
-
-      - name: Build
-        run: swift build -v
-
-      - name: Test
-        run: swift test -v
+      - run: sudo xcode-select -s /Applications/Xcode_26.4.app
+      - run: swift --version
+      - run: swift build -v
+      - run: swift test -v
