@@ -10,11 +10,11 @@
 |---|---|
 | Display model | e.g. `Dell U2723QE` |
 | Connection | e.g. `USB-C (DisplayPort Alt Mode)` / `HDMI 2.1` / `Thunderbolt 4` |
-| Host Mac | e.g. `MacBook Pro 14" M3, macOS 14.5` |
+| Host Mac | e.g. `MacBook Pro 14" M3, macOS 26.x` |
 | Path taken | `DisplayServices` / `DDC/CI` / both |
 | VCP code (if DDC) | e.g. `0x10` |
-| `getBrightness` result | `0.75` / `nil` / N/A |
-| `setBrightness(0.5)` result | `true` / `false` |
+| `getBrightness` result | e.g. `0.75` / threw `MacBrightnessKitError.xxx` |
+| `setBrightness(displayID:value: 0.5)` result | `success` / threw `MacBrightnessKitError.xxx` |
 | Visible change | `yes` / `no` |
 
 ## Checklist
