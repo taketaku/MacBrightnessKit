@@ -2,7 +2,7 @@
 
 A minimal Swift Package for controlling the brightness of macOS displays — built-in, Apple external displays (Studio Display / LG UltraFine), and generic DDC/CI monitors — through a single unified API.
 
-Extracted from Tenn's macOS app. Licensed under MIT.
+Extracted from [Tenn's macOS app](https://www.tensec.org/). Licensed under MIT.
 
 ## Why
 
